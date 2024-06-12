@@ -47,16 +47,18 @@ class WebrtcCubit extends Cubit<WebrtcState> {
     await state.peerConnection!.setLocalDescription(offer);
 
     _subscriptions.addAll([
-      _interactor.getRoomDataStream(roomId: roomId).listen((answer) async {
-        if (answer != null) {
-          state.peerConnection?.setRemoteDescription(answer);
+      _interactor.getRoomDataStream(roomId: roomId).listen((session) async {
+        if (session != null) {
+          await state.peerConnection?.setRemoteDescription(session);
         } else {
           if (state.remoteStream != null) {
             emit(state.copyWith(clearAll: true));
           }
         }
       }),
-      _interactor.getCandidatesAddedToRoomStream(roomId: roomId, listenCaller: false).listen(
+      _interactor
+          .getCandidatesAddedToRoomStream(roomId: roomId, listenCaller: false)
+          .listen(
         (candidates) {
           for (final candidate in candidates) {
             state.peerConnection?.addCandidate(candidate);
@@ -67,7 +69,8 @@ class WebrtcCubit extends Cubit<WebrtcState> {
   }
 
   Future<void> joinRoom(String roomId) async {
-    final sessionDescription = await _interactor.getRoomOfferIfExists(roomId: roomId);
+    final sessionDescription =
+        await _interactor.getRoomOfferIfExists(roomId: roomId);
 
     if (sessionDescription != null) {
       await _createPeerConnection();
@@ -92,7 +95,10 @@ class WebrtcCubit extends Cubit<WebrtcState> {
 
       _subscriptions.addAll(
         [
-          _interactor.getCandidatesAddedToRoomStream(roomId: roomId, listenCaller: true).listen(
+          _interactor
+              .getCandidatesAddedToRoomStream(
+                  roomId: roomId, listenCaller: true)
+              .listen(
             (candidates) {
               for (final candidate in candidates) {
                 state.peerConnection?.addCandidate(candidate);
@@ -123,7 +129,8 @@ class WebrtcCubit extends Cubit<WebrtcState> {
   }
 
   Future<void> enableUserMediaStream() async {
-    var stream = await navigator.mediaDevices.getUserMedia({'video': true, 'audio': true});
+    var stream = await navigator.mediaDevices
+        .getUserMedia({'video': true, 'audio': true});
     emit(
       state.copyWith(
         localStream: stream,
@@ -134,28 +141,36 @@ class WebrtcCubit extends Cubit<WebrtcState> {
 
   void enableVideo() {
     if (state.videoDisabled) {
-      state.localStream?.getVideoTracks().forEach((track) => track.enabled = true);
+      state.localStream
+          ?.getVideoTracks()
+          .forEach((track) => track.enabled = true);
       emit(state.copyWith(videoDisabled: false));
     }
   }
 
   void disableVideo() {
     if (!state.videoDisabled) {
-      state.localStream?.getVideoTracks().forEach((track) => track.enabled = false);
+      state.localStream
+          ?.getVideoTracks()
+          .forEach((track) => track.enabled = false);
       emit(state.copyWith(videoDisabled: true));
     }
   }
 
   void enableAudio() {
     if (state.audioDisabled) {
-      state.localStream?.getAudioTracks().forEach((track) => track.enabled = true);
+      state.localStream
+          ?.getAudioTracks()
+          .forEach((track) => track.enabled = true);
       emit(state.copyWith(audioDisabled: false));
     }
   }
 
   void disableAudio() {
     if (!state.audioDisabled) {
-      state.localStream?.getAudioTracks().forEach((track) => track.enabled = false);
+      state.localStream
+          ?.getAudioTracks()
+          .forEach((track) => track.enabled = false);
       emit(state.copyWith(audioDisabled: true));
     }
   }
@@ -214,7 +229,9 @@ class WebrtcCubit extends Cubit<WebrtcState> {
         method: 'joinRoom(onTrack)',
         line: 210,
       );
-      event.streams[0].getTracks().forEach((track) => state.remoteStream?.addTrack(track));
+      event.streams[0]
+          .getTracks()
+          .forEach((track) => state.remoteStream?.addTrack(track));
     };
   }
 }

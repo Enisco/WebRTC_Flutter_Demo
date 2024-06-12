@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:video_streaming/utils/logger.dart';
 
 class RemoteDataSource {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -32,7 +33,8 @@ class RemoteDataSource {
     await roomRef.update(roomWithAnswer);
   }
 
-  Future<RTCSessionDescription?> getRoomOfferIfExists({required String roomId}) async {
+  Future<RTCSessionDescription?> getRoomOfferIfExists(
+      {required String roomId}) async {
     final roomDoc = await _db.collection(_roomsCollection).doc(roomId).get();
     if (!roomDoc.exists) {
       return null;
@@ -48,11 +50,15 @@ class RemoteDataSource {
     final filteredStream = snapshots.map((snapshot) => snapshot.data());
     return filteredStream.map(
       (data) {
+        Logger.printYellow(message: 'type: $data');
         if (data != null && data['answer'] != null) {
-          return RTCSessionDescription(
+          final session = RTCSessionDescription(
             data['answer']['sdp'],
             data['answer']['type'],
           );
+          Logger.printRed(
+              message: 'type: ${session.type}\t sdp: ${session.sdp}');
+          return session;
         } else {
           return null;
         }
@@ -75,7 +81,8 @@ class RemoteDataSource {
       (snapshot) {
         final docChangesList = listenCaller
             ? snapshot.docChanges
-            : snapshot.docChanges.where((change) => change.type == DocumentChangeType.added);
+            : snapshot.docChanges
+                .where((change) => change.type == DocumentChangeType.added);
         return docChangesList.map((change) {
           final data = change.doc.data() as Map<String, dynamic>;
           return RTCIceCandidate(
@@ -96,6 +103,7 @@ class RemoteDataSource {
   }) async {
     final roomRef = _db.collection(_roomsCollection).doc(roomId);
     final candidatesCollection = roomRef.collection(_candidatesCollection);
-    await candidatesCollection.add(candidate.toMap()..[_candidateUidField] = userId);
+    await candidatesCollection
+        .add(candidate.toMap()..[_candidateUidField] = userId);
   }
 }

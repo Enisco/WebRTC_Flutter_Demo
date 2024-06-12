@@ -119,7 +119,7 @@ class _WebrtcPageState extends State<WebrtcPage> {
             style: buttonIsNotActive
                 ? null
                 : const ButtonStyle().copyWith(
-                    backgroundColor: const MaterialStatePropertyAll(Colors.grey),
+                    backgroundColor: const WidgetStatePropertyAll(Colors.grey),
                   ),
             onPressed: buttonIsNotActive
                 ? null
@@ -270,3 +270,4 @@ class _WebrtcPageState extends State<WebrtcPage> {
     ];
   }
 }
+ 
