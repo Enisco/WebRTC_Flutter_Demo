@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:video_streaming/domain/interactors/webrtc_interactor.dart';
-import 'package:video_streaming/presentation/pages/webrtc/webrtc_state.dart';
+import 'package:video_streaming/firebase_repo/firebase_repo.dart';
+import 'package:video_streaming/presentation/webrtc_screen/webrtc_state.dart';
 import 'package:video_streaming/utils/logger.dart';
 
 class WebrtcCubit extends Cubit<WebrtcState> {
+  final firebaseRepo = FirebaseRepo();
+
   static final WebrtcState _initialState = WebrtcState();
 
   static const Map<String, dynamic> _configuration = {
@@ -20,16 +22,15 @@ class WebrtcCubit extends Cubit<WebrtcState> {
     ],
   };
 
-  final WebrtcInteractor _interactor;
   final List<StreamSubscription> _subscriptions = [];
 
-  WebrtcCubit(this._interactor) : super(_initialState);
+  WebrtcCubit() : super(_initialState);
 
   Future<void> createRoom() async {
     await _createPeerConnection();
 
     final offer = await state.peerConnection!.createOffer();
-    final roomId = await _interactor.createRoom(offer: offer);
+    final roomId = await firebaseRepo.createRoom(offer: offer);
     _registerPeerConnectionListeners(roomId);
 
     state.localStream?.getTracks().forEach((track) {
@@ -47,7 +48,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
     await state.peerConnection!.setLocalDescription(offer);
 
     _subscriptions.addAll([
-      _interactor.getRoomDataStream(roomId: roomId).listen((session) async {
+      firebaseRepo.getRoomDataStream(roomId: roomId).listen((session) async {
         if (session != null) {
           await state.peerConnection?.setRemoteDescription(session);
         } else {
@@ -56,8 +57,8 @@ class WebrtcCubit extends Cubit<WebrtcState> {
           }
         }
       }),
-      _interactor
-          .getCandidatesAddedToRoomStream(roomId: roomId, listenCaller: false)
+      firebaseRepo.getCandidatesAddedToRoomStream(
+              roomId: roomId, listenCaller: false)
           .listen(
         (candidates) {
           for (final candidate in candidates) {
@@ -70,7 +71,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
 
   Future<void> joinRoom(String roomId) async {
     final sessionDescription =
-        await _interactor.getRoomOfferIfExists(roomId: roomId);
+        await firebaseRepo.getRoomOfferIfExists(roomId: roomId);
 
     if (sessionDescription != null) {
       await _createPeerConnection();
@@ -83,6 +84,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
 
       await state.peerConnection!.setRemoteDescription(sessionDescription);
       final answer = await state.peerConnection!.createAnswer();
+      
       Logger.printYellow(
         message: 'Answer (Session Description Protocol package) created',
         filename: 'webrtc_cubit',
@@ -90,13 +92,12 @@ class WebrtcCubit extends Cubit<WebrtcState> {
         line: 82,
       );
 
-      await state.peerConnection!.setLocalDescription(answer);
-      await _interactor.setAnswer(roomId: roomId, answer: answer);
+      await state.peerConnection?.setLocalDescription(answer);
+      await firebaseRepo.setAnswer(roomId: roomId, answer: answer);
 
       _subscriptions.addAll(
         [
-          _interactor
-              .getCandidatesAddedToRoomStream(
+          firebaseRepo.getCandidatesAddedToRoomStream(
                   roomId: roomId, listenCaller: true)
               .listen(
             (candidates) {
@@ -105,7 +106,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
               }
             },
           ),
-          _interactor.getRoomDataStream(roomId: roomId).listen(
+          firebaseRepo.getRoomDataStream(roomId: roomId).listen(
             (answer) async {
               if (answer == null) {
                 emit(state.copyWith(clearAll: true));
@@ -187,7 +188,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
     if (state.peerConnection != null) state.peerConnection!.close();
 
     if (state.roomId != null) {
-      _interactor.deleteRoom(roomId: state.roomId!);
+      firebaseRepo.deleteRoom(roomId: state.roomId!);
     }
 
     state.localStream!.dispose();
@@ -209,7 +210,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
         method: 'joinRoom(onIceCandidate)',
         line: 190,
       );
-      _interactor.addCandidateToRoom(roomId: roomId, candidate: candidate);
+      firebaseRepo.addCandidateToRoom(roomId: roomId, candidate: candidate);
     };
 
     state.peerConnection!.onAddStream = (stream) {
@@ -219,6 +220,7 @@ class WebrtcCubit extends Cubit<WebrtcState> {
         method: '_registerPeerConnectionListeners',
         line: 200,
       );
+
       emit(state.copyWith(remoteStream: stream, companionShown: true));
     };
 

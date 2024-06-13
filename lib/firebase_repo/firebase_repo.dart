@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:video_streaming/utils/logger.dart';
 
-class RemoteDataSource {
+class FirebaseRepo {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   static const String _roomsCollection = 'rooms';
@@ -10,6 +11,31 @@ class RemoteDataSource {
   static const String _candidateUidField = 'uid';
 
   String? userId;
+
+  Future<void> signInAnonymously() async {
+    try {
+      final userCredential = await FirebaseAuth.instance.signInAnonymously();
+      userId = userCredential.user?.uid;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'operation-not-allowed':
+          Logger.printRed(
+            message: 'Anonymous auth hasn\'t been enabled for this project',
+            filename: 'auth_repository',
+            method: 'signInAnonymously',
+            line: 18,
+          );
+          break;
+        default:
+          Logger.printRed(
+            message: 'Unknown error',
+            filename: 'auth_repository',
+            method: 'signInAnonymously',
+            line: 26,
+          );
+      }
+    }
+  }
 
   Future<String> createRoom({required RTCSessionDescription offer}) async {
     final roomRef = _db.collection(_roomsCollection).doc();
@@ -50,14 +76,23 @@ class RemoteDataSource {
     final filteredStream = snapshots.map((snapshot) => snapshot.data());
     return filteredStream.map(
       (data) {
-        Logger.printYellow(message: 'type: $data');
+          Logger.printYellow(
+            message: 'data: $data',
+            filename: 'getRoomDataStream',
+            method: 'getRoomDataStream',
+            line: 60,
+          );
         if (data != null && data['answer'] != null) {
           final session = RTCSessionDescription(
             data['answer']['sdp'],
             data['answer']['type'],
           );
           Logger.printRed(
-              message: 'type: ${session.type}\t sdp: ${session.sdp}');
+            message: 'type: ${session.type}\t sdp: ${session.sdp}',
+            filename: 'getRoomDataStream',
+            method: 'getRoomDataStream',
+            line: 60,
+          );
           return session;
         } else {
           return null;

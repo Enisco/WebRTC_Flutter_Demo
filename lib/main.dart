@@ -1,8 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:video_streaming/di/injector.dart';
-import 'package:video_streaming/domain/repositories/auth_repository.dart';
 import 'package:video_streaming/firebase_options.dart';
+import 'package:video_streaming/firebase_repo/firebase_repo.dart';
 import 'package:video_streaming/presentation/app/app.dart';
 
 void main() async {
@@ -10,7 +9,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  initInjector();
-  await i.get<AuthRepositoryInt>().signInAnonymously();
+  FirebaseRepo().signInAnonymously();
   runApp(const VideoStreamingApp());
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:video_streaming/di/injector.dart';
-import 'package:video_streaming/presentation/pages/webrtc/webrtc_cubit.dart';
-import 'package:video_streaming/presentation/pages/webrtc/webrtc_state.dart';
+import 'package:video_streaming/presentation/webrtc_screen/webrtc_cubit.dart';
+import 'package:video_streaming/presentation/webrtc_screen/webrtc_state.dart';
+import 'package:video_streaming/utils/logger.dart';
 
 class WebrtcPage extends StatefulWidget {
   WebrtcPage({Key? key}) : super(key: key);
@@ -16,11 +16,12 @@ class _WebrtcPageState extends State<WebrtcPage> {
   static const int roomIdLength = 20;
   static const double _defaultPadding = 20;
 
-  final WebrtcCubit _cubit = i.get();
+  final WebrtcCubit _cubit = WebrtcCubit();
 
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  final TextEditingController _textEditingController = TextEditingController(text: '');
+  final TextEditingController _textEditingController =
+      TextEditingController(text: '');
 
   @override
   void initState() {
@@ -52,13 +53,23 @@ class _WebrtcPageState extends State<WebrtcPage> {
           _remoteRenderer.initialize();
           _textEditingController.text = '';
         } else {
-          if (state.localStream != null || _localRenderer.srcObject != state.localStream) {
+          if (state.localStream != null ||
+              _localRenderer.srcObject != state.localStream) {
             _localRenderer.srcObject = state.localStream!;
           }
-          if (state.remoteStream != null || _remoteRenderer.srcObject != state.remoteStream) {
+          if (state.remoteStream != null ||
+              _remoteRenderer.srcObject != state.remoteStream) {
             _remoteRenderer.srcObject = state.remoteStream!;
+            try {
+              Logger.printMagenta(
+                  message:
+                      '${state.remoteStream?.active} -- ${_remoteRenderer.srcObject?.active}');
+            } catch (e) {
+              Logger.printMagenta(message: e.toString());
+            }
           }
-          if (state.roomId != null && state.roomId != _textEditingController.text) {
+          if (state.roomId != null &&
+              state.roomId != _textEditingController.text) {
             _textEditingController.text = state.roomId!;
           }
         }
@@ -89,8 +100,8 @@ class _WebrtcPageState extends State<WebrtcPage> {
   }
 
   Widget _emptyPage() {
-    final buttonIsNotActive =
-        _textEditingController.text.isEmpty || _textEditingController.text.length != roomIdLength;
+    final buttonIsNotActive = _textEditingController.text.isEmpty ||
+        _textEditingController.text.length != roomIdLength;
 
     return Center(
       child: Column(
@@ -168,7 +179,8 @@ class _WebrtcPageState extends State<WebrtcPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ..._mediaButtons(cameraEnabled: cameraEnabled, microEnabled: microEnabled),
+              ..._mediaButtons(
+                  cameraEnabled: cameraEnabled, microEnabled: microEnabled),
               _endCallButton(),
             ],
           ),
@@ -197,7 +209,9 @@ class _WebrtcPageState extends State<WebrtcPage> {
           bottom: _defaultPadding,
           child: Container(
             width: previewWidth,
-            height: previewWidth * _localRenderer.videoWidth / _localRenderer.videoHeight,
+            height: previewWidth *
+                _localRenderer.videoWidth /
+                _localRenderer.videoHeight,
             decoration: BoxDecoration(
               borderRadius: const BorderRadius.all(Radius.circular(10)),
               border: Border.all(color: Colors.blueAccent),
@@ -217,7 +231,8 @@ class _WebrtcPageState extends State<WebrtcPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ..._mediaButtons(cameraEnabled: cameraEnabled, microEnabled: microEnabled),
+              ..._mediaButtons(
+                  cameraEnabled: cameraEnabled, microEnabled: microEnabled),
               _endCallButton(),
             ],
           ),
@@ -237,7 +252,8 @@ class _WebrtcPageState extends State<WebrtcPage> {
     );
   }
 
-  List<Widget> _mediaButtons({required bool microEnabled, required bool cameraEnabled}) {
+  List<Widget> _mediaButtons(
+      {required bool microEnabled, required bool cameraEnabled}) {
     return [
       FloatingActionButton(
         onPressed: () {
@@ -270,4 +286,3 @@ class _WebrtcPageState extends State<WebrtcPage> {
     ];
   }
 }
- 
